@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Astronomy Picture of the Day</title>
+    
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* Custom styles for the page */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0c0a09; /* A very dark, almost black background */
+            background-image: 
+                radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.05) 1px, transparent 0),
+                radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.05) 1px, transparent 0);
+            background-size: 50px 50px;
+            color: #e7e5e4; /* A soft off-white for text */
+        }
+
+        h1, h2 {
+            font-family: 'Space Mono', monospace;
+        }
+
+        /* Styling for the loader animation */
+        .loader {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #44403c; /* stone-700 */
+            border-bottom-color: #a78bfa; /* violet-400 */
+            border-radius: 50%;
+            display: inline-block;
+            box-sizing: border-box;
+            animation: rotation 1s linear infinite;
+        }
+
+        @keyframes rotation {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Custom styles for the date picker */
+        input[type="date"] {
+            background-color: #1c1917;
+            border: 1px solid #44403c;
+            color: #e7e5e4;
+            border-radius: 0.5rem;
+            padding: 0.5rem 0.75rem;
+        }
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div class="container mx-auto p-4 sm:p-6 lg:p-8 max-w-5xl">
+
+        <!-- Header Section -->
+        <header class="text-center my-8">
+            <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-2">Astronomy Picture of the Day</h1>
+            <p class="text-base text-stone-400">Explore the cosmos, one day at a time.</p>
+        </header>
+
+        <!-- Controls Section -->
+        <div class="flex flex-col sm:flex-row justify-center items-center gap-4 my-8">
+            <div class="flex items-center gap-2">
+                <label for="apod-date" class="text-stone-300">Select Date:</label>
+                <input type="date" id="apod-date" name="apod-date">
+            </div>
+            <button id="random-btn" class="w-full sm:w-auto bg-violet-600 hover:bg-violet-700 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-300">
+                Get Random Picture
+            </button>
+        </div>
+
+        <!-- Main Content Area -->
+        <main id="apod-content" class="bg-stone-900/50 backdrop-blur-sm border border-stone-800 rounded-xl shadow-2xl p-4 sm:p-6 lg:p-8 min-h-[500px] flex justify-center items-center">
+            
+            <!-- Loader will be shown while fetching data -->
+            <div id="loader" class="text-center">
+                <div class="loader mx-auto"></div>
+                <p class="mt-4 text-stone-400">Contacting NASA...</p>
+            </div>
+
+            <!-- APOD Data will be populated here -->
+            <div id="apod-data" class="hidden w-full">
+                <h2 id="apod-title" class="text-2xl sm:text-3xl font-bold text-white text-center mb-4"></h2>
+                
+                <div id="apod-media-container" class="mb-6 bg-black rounded-lg overflow-hidden flex justify-center items-center">
+                    <!-- Image or Video will be inserted here -->
+                </div>
+
+                <div class="space-y-4">
+                    <p class="text-stone-400 text-center"><strong>Date:</strong> <span id="apod-date-display"></span></p>
+                    <p id="apod-explanation" class="text-base sm:text-lg text-stone-300 leading-relaxed"></p>
+                    <p id="apod-copyright" class="text-sm text-stone-500 text-center italic"></p>
+                </div>
+            </div>
+            
+            <!-- Error message container -->
+            <div id="error-container" class="hidden text-center">
+                 <p class="text-2xl text-red-400">Houston, we have a problem.</p>
+                 <p id="error-message" class="mt-2 text-stone-400"></p>
+            </div>
+
+        </main>
+
+        <!-- Footer Section -->
+        <footer class="text-center mt-8 py-4">
+            <p class="text-stone-500 text-sm">
+                Powered by the <a href="https://api.nasa.gov/" target="_blank" rel="noopener noreferrer" class="text-violet-400 hover:underline">NASA APOD API</a>.
+            </p>
+             <p class="text-stone-600 text-xs mt-1">
+                All images and data are courtesy of NASA and the content owners.
+            </p>
+        </footer>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- DOM Element References ---
+            const contentContainer = document.getElementById('apod-content');
+            const loader = document.getElementById('loader');
+            const apodDataContainer = document.getElementById('apod-data');
+            const errorContainer = document.getElementById('error-container');
+            const errorMessage = document.getElementById('error-message');
+            
+            const titleEl = document.getElementById('apod-title');
+            const mediaContainer = document.getElementById('apod-media-container');
+            const dateDisplayEl = document.getElementById('apod-date-display');
+            const explanationEl = document.getElementById('apod-explanation');
+            const copyrightEl = document.getElementById('apod-copyright');
+
+            const datePicker = document.getElementById('apod-date');
+            const randomBtn = document.getElementById('random-btn');
+
+            // --- API Configuration ---
+            // NOTE: Using NASA's DEMO_KEY is fine for development. 
+            // For a production app, you should get a free key from https://api.nasa.gov/
+            const API_KEY = 'DEMO_KEY';
+            const API_URL = 'https://api.nasa.gov/planetary/apod';
+
+            // --- Functions ---
+
+            /**
+             * Fetches data from the APOD API for a specific date.
+             * @param {string} [date] - The date in YYYY-MM-DD format. If null, fetches today's data.
+             */
+            async function fetchAPOD(date) {
+                showLoader();
+                let url = `${API_URL}?api_key=${API_KEY}`;
+                if (date) {
+                    url += `&date=${date}`;
+                }
+
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.msg || `HTTP error! status: ${response.status}`);
+                    }
+                    const data = await response.json();
+                    renderAPOD(data);
+                } catch (error) {
+                    console.error("Error fetching APOD data:", error);
+                    showError(`Could not fetch data. ${error.message}`);
+                }
+            }
+            
+            /**
+             * Renders the fetched APOD data onto the page.
+             * @param {object} data - The data object from the APOD API.
+             */
+            function renderAPOD(data) {
+                hideLoader();
+                
+                titleEl.textContent = data.title;
+                dateDisplayEl.textContent = data.date;
+                explanationEl.textContent = data.explanation;
+                
+                // Clear previous media
+                mediaContainer.innerHTML = '';
+
+                // Display image or video
+                if (data.media_type === 'image') {
+                    const img = document.createElement('img');
+                    img.src = data.hdurl || data.url;
+                    img.alt = data.title;
+                    img.className = 'max-w-full h-auto rounded-lg mx-auto';
+                    mediaContainer.appendChild(img);
+                } else if (data.media_type === 'video') {
+                    const iframe = document.createElement('iframe');
+                    iframe.src = data.url;
+                    iframe.title = data.title;
+                    iframe.frameBorder = '0';
+                    iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+                    iframe.allowFullscreen = true;
+                    iframe.className = 'w-full aspect-video rounded-lg';
+                    mediaContainer.appendChild(iframe);
+                }
+
+                // Display copyright information if available
+                if (data.copyright) {
+                    copyrightEl.textContent = `© ${data.copyright}`;
+                } else {
+                    copyrightEl.textContent = '';
+                }
+                
+                apodDataContainer.classList.remove('hidden');
+            }
+
+            /**
+             * Generates a random date between APOD's start and today.
+             * @returns {string} A date string in YYYY-MM-DD format.
+             */
+            function getRandomDate() {
+                const startDate = new Date('1995-06-16'); // APOD start date
+                const endDate = new Date();
+                const randomTime = startDate.getTime() + Math.random() * (endDate.getTime() - startDate.getTime());
+                const randomDate = new Date(randomTime);
+                return randomDate.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+            }
+
+            // --- UI Helper Functions ---
+            
+            function showLoader() {
+                loader.classList.remove('hidden');
+                apodDataContainer.classList.add('hidden');
+                errorContainer.classList.add('hidden');
+            }
+
+            function hideLoader() {
+                loader.classList.add('hidden');
+            }
+            
+            function showError(message) {
+                hideLoader();
+                apodDataContainer.classList.add('hidden');
+                errorMessage.textContent = message;
+                errorContainer.classList.remove('hidden');
+            }
+
+            // --- Event Listeners ---
+            
+            randomBtn.addEventListener('click', () => {
+                const randomDate = getRandomDate();
+                datePicker.value = randomDate; // Update date picker to reflect the random date
+                fetchAPOD(randomDate);
+            });
+
+            datePicker.addEventListener('change', (e) => {
+                const selectedDate = e.target.value;
+                if(selectedDate) {
+                    fetchAPOD(selectedDate);
+                }
+            });
+
+            // --- Initial Load ---
+            const today = new Date().toISOString().split('T')[0];
+            datePicker.value = today;
+            datePicker.max = today; // Prevent selecting future dates
+            fetchAPOD(); // Fetch today's picture on page load
+        });
+    </script>
+
+</body>
+</html>
