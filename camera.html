@@ -48,6 +48,9 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                             </svg>
                         </button>
+
+                        <!-- Flipped Text Indicator -->
+                        <div id="flippedIndicator" class="absolute top-3 right-3 bg-black/50 text-white text-xs font-bold py-1 px-2 rounded-md hidden">V FLIPPED</div>
                     </div>
                 </div>
 
@@ -112,6 +115,7 @@
         const errorMessage = document.getElementById('errorMessage');
         const flipButton = document.getElementById('flipButton');
         const flipStatus = document.getElementById('flipStatus');
+        const flippedIndicator = document.getElementById('flippedIndicator');
         const videoContainer = document.getElementById('videoContainer');
         const markerList = document.getElementById('markerList');
         const cameraSelector = document.getElementById('cameraSelector');
@@ -272,6 +276,7 @@
         flipButton.addEventListener('click', () => {
             videoElement.classList.toggle('flipped');
             flipStatus.classList.toggle('hidden');
+            flippedIndicator.classList.toggle('hidden');
         });
         openDrawerButton.addEventListener('click', openDrawer);
         closeDrawerButton.addEventListener('click', closeDrawer);
@@ -291,4 +296,5 @@
 
 </body>
 </html>
+
 
