@@ -11,9 +11,16 @@
         body {
             font-family: 'Inter', sans-serif;
         }
-        /* Style for the vertically flipped video */
-        #cameraFeed.flipped {
-            transform: scaleY(-1);
+        /* Style for flipping the video using CSS variables for independent flipping */
+        #cameraFeed {
+            transition: transform 0.3s;
+            transform: scaleX(var(--scale-x, 1)) scaleY(var(--scale-y, 1));
+        }
+        #cameraFeed.v-flipped {
+           --scale-y: -1;
+        }
+        #cameraFeed.h-flipped {
+           --scale-x: -1;
         }
         /* Hide number input spinners */
         input[type=number]::-webkit-inner-spin-button, 
@@ -38,7 +45,7 @@
                 <!-- Video Feed -->
                 <div class="flex-1">
                     <div id="videoContainer" class="relative w-full aspect-video bg-black rounded-lg overflow-hidden shadow-lg">
-                        <video id="cameraFeed" class="w-full h-full object-cover transition-transform duration-300" autoplay playsinline></video>
+                        <video id="cameraFeed" class="w-full h-full object-cover" autoplay playsinline></video>
                         <!-- Marker lines will be dynamically added here -->
                         
                         <!-- Settings Drawer Toggle Button -->
@@ -49,13 +56,16 @@
                             </svg>
                         </button>
 
-                        <!-- Flipped Text Indicator -->
-                        <div id="flippedIndicator" class="absolute top-3 right-3 bg-black/50 text-white text-xs font-bold py-1 px-2 rounded-md hidden">V FLIPPED</div>
+                        <!-- Flipped Text Indicators -->
+                        <div id="hFlippedIndicator" class="absolute bottom-3 right-3 bg-black/50 text-white text-xs font-bold py-1 px-2 rounded-md hidden">H FLIPPED</div>
+                        <div id="vFlippedIndicator" class="absolute top-3 right-3 bg-black/50 text-white text-xs font-bold py-1 px-2 rounded-md hidden">V FLIPPED</div>
+                        <!-- Scale Marker Indicator -->
+                        <div id="scaleMarker" class="absolute bottom-3 left-3 bg-black/50 text-white text-xs p-2 rounded-md hidden"></div>
                     </div>
                 </div>
 
                 <!-- Drawer/Side Panel -->
-                <div id="controlsDrawer" class="fixed top-0 left-0 h-full w-full max-w-xs md:max-w-sm bg-gray-800 shadow-2xl p-4 transform -translate-x-full transition-transform duration-300 ease-in-out z-50">
+                <div id="controlsDrawer" class="fixed top-0 left-0 h-full w-full max-w-xs md:max-w-sm bg-gray-800 shadow-2xl p-4 transform -translate-x-full transition-transform duration-300 ease-in-out z-50 overflow-y-auto">
                      <!-- Drawer Header -->
                     <div class="flex justify-between items-center border-b border-gray-600 pb-3 mb-4">
                         <h2 class="text-xl font-semibold text-white">Controls</h2>
@@ -69,24 +79,37 @@
                     <!-- Drawer Content -->
                     <div class="space-y-6">
                         <div>
-                             <label for="cameraSelector" class="font-medium text-gray-300">Select Camera</label>
+                             <label for="cameraSelector" class="font-medium text-gray-300 block text-left">Select Camera</label>
                              <select id="cameraSelector" class="mt-2 w-full bg-gray-900 border border-gray-600 rounded-md p-2 text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none disabled:bg-gray-800 disabled:cursor-not-allowed" disabled>
                                 <option>No cameras found</option>
                              </select>
                         </div>
 
                         <div>
-                            <div class="flex items-center justify-between">
-                                <label class="font-medium text-gray-300">Image Orientation</label>
-                                <span id="flipStatus" class="text-sm text-yellow-400 font-semibold hidden">(Flipped)</span>
+                            <label class="font-medium text-gray-300 block text-left mb-2">Image Orientation</label>
+                            <div class="flex space-x-2">
+                                <button id="flipVButton" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-all transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-blue-500 focus:ring-opacity-50 disabled:bg-gray-500 disabled:cursor-not-allowed disabled:hover:scale-100" disabled>
+                                    Flip Vertical
+                                </button>
+                                <button id="flipHButton" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-all transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-blue-500 focus:ring-opacity-50 disabled:bg-gray-500 disabled:cursor-not-allowed disabled:hover:scale-100" disabled>
+                                    Flip Horizontal
+                                </button>
                             </div>
-                            <button id="flipButton" class="mt-2 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-all transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-blue-500 focus:ring-opacity-50 disabled:bg-gray-500 disabled:cursor-not-allowed disabled:hover:scale-100" disabled>
-                                Flip Vertical
-                            </button>
                         </div>
 
                         <div>
-                            <h3 class="text-md font-semibold mb-2 text-white">Adjustable Markers</h3>
+                            <h3 class="text-md font-semibold mb-2 text-white text-left">Scale Marker</h3>
+                            <div class="flex items-center space-x-2 p-3 bg-black/20 rounded-lg">
+                                <input type="number" id="scaleInput" value="0" min="0" class="w-full bg-gray-900 border border-gray-600 rounded-md p-1 text-center text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="Value">
+                                <select id="unitSelector" class="bg-gray-900 border border-gray-600 rounded-md p-1 text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                    <option>mm</option>
+                                    <option>µm</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3 class="text-md font-semibold mb-2 text-white text-left">Adjustable Markers</h3>
                             <div id="markerList" class="text-gray-300 text-sm space-y-2 mt-2 p-3 bg-black/20 rounded-lg">
                                 <p class="text-gray-500">Camera not started...</p>
                             </div>
@@ -113,9 +136,10 @@
         const videoElement = document.getElementById('cameraFeed');
         const statusMessage = document.getElementById('statusMessage');
         const errorMessage = document.getElementById('errorMessage');
-        const flipButton = document.getElementById('flipButton');
-        const flipStatus = document.getElementById('flipStatus');
-        const flippedIndicator = document.getElementById('flippedIndicator');
+        const flipVButton = document.getElementById('flipVButton');
+        const flipHButton = document.getElementById('flipHButton');
+        const vFlippedIndicator = document.getElementById('vFlippedIndicator');
+        const hFlippedIndicator = document.getElementById('hFlippedIndicator');
         const videoContainer = document.getElementById('videoContainer');
         const markerList = document.getElementById('markerList');
         const cameraSelector = document.getElementById('cameraSelector');
@@ -123,6 +147,9 @@
         const openDrawerButton = document.getElementById('openDrawerButton');
         const closeDrawerButton = document.getElementById('closeDrawerButton');
         const drawerOverlay = document.getElementById('drawerOverlay');
+        const scaleInput = document.getElementById('scaleInput');
+        const unitSelector = document.getElementById('unitSelector');
+        const scaleMarker = document.getElementById('scaleMarker');
 
         let currentStream; // To hold the active stream
 
@@ -151,7 +178,9 @@
                 const devices = await navigator.mediaDevices.enumerateDevices();
                 const videoDevices = devices.filter(device => device.kind === 'videoinput');
                 
+                const currentSelection = cameraSelector.value;
                 cameraSelector.innerHTML = '';
+
                 if (videoDevices.length === 0) {
                     cameraSelector.innerHTML = '<option>No cameras found</option>';
                     cameraSelector.disabled = true;
@@ -162,6 +191,9 @@
                     const option = document.createElement('option');
                     option.value = device.deviceId;
                     option.text = device.label || `Camera ${index + 1}`;
+                    if(device.deviceId === currentSelection) {
+                        option.selected = true;
+                    }
                     cameraSelector.appendChild(option);
                 });
                 cameraSelector.disabled = false;
@@ -187,10 +219,11 @@
                 videoElement.onloadedmetadata = () => {
                     videoElement.play();
                     statusMessage.classList.add('hidden');
-                    flipButton.disabled = false;
+                    flipVButton.disabled = false;
+                    flipHButton.disabled = false;
                     populateMarkerInputs();
                     drawMarkers();
-                    getAndSetCameras();
+                    getAndSetCameras(); // Populate list after stream starts for labels
                 };
 
             } catch (error) {
@@ -205,6 +238,54 @@
         }
         
         // --- UI & Marker Functions ---
+        function updateScaleMarker() {
+            const value = parseFloat(scaleInput.value);
+            const unit = unitSelector.value;
+
+            // Clear previous content
+            scaleMarker.innerHTML = '';
+
+            if (value > 0) {
+                scaleMarker.style.width = '120px'; // A fixed width for the scale bar
+
+                const scaleContainer = document.createElement('div');
+                scaleContainer.className = 'flex flex-col items-center w-full';
+
+                const ticksContainer = document.createElement('div');
+                ticksContainer.className = 'w-full flex justify-between items-end relative';
+                ticksContainer.style.height = '10px';
+
+                // Create 11 ticks for 10 divisions
+                for (let i = 0; i <= 10; i++) {
+                    const tick = document.createElement('div');
+                    tick.style.backgroundColor = 'white';
+                    tick.style.width = '1px';
+                    // Taller ticks at start, middle, and end
+                    tick.style.height = (i === 0 || i === 5 || i === 10) ? '100%' : '50%';
+                    ticksContainer.appendChild(tick);
+                }
+                
+                // The main horizontal line connecting the ticks
+                const line = document.createElement('div');
+                line.className = 'absolute bottom-0 left-0 w-full h-px bg-white';
+                ticksContainer.appendChild(line);
+
+                // Text label below the scale
+                const label = document.createElement('div');
+                label.className = 'font-semibold mt-1';
+                label.textContent = `${value} ${unit}`;
+
+                // Assemble the scale bar
+                scaleContainer.appendChild(ticksContainer);
+                scaleContainer.appendChild(label);
+                scaleMarker.appendChild(scaleContainer);
+
+                scaleMarker.classList.remove('hidden');
+            } else {
+                scaleMarker.classList.add('hidden');
+            }
+        }
+
         function populateMarkerInputs() {
             markerList.innerHTML = '';
             markers.forEach((marker, index) => {
@@ -273,14 +354,23 @@
 
         // --- Event Listeners ---
         cameraSelector.addEventListener('change', (event) => startCamera(event.target.value));
-        flipButton.addEventListener('click', () => {
-            videoElement.classList.toggle('flipped');
-            flipStatus.classList.toggle('hidden');
-            flippedIndicator.classList.toggle('hidden');
+        
+        flipVButton.addEventListener('click', () => {
+            videoElement.classList.toggle('v-flipped');
+            vFlippedIndicator.classList.toggle('hidden');
         });
+
+        flipHButton.addEventListener('click', () => {
+            videoElement.classList.toggle('h-flipped');
+            hFlippedIndicator.classList.toggle('hidden');
+        });
+
         openDrawerButton.addEventListener('click', openDrawer);
         closeDrawerButton.addEventListener('click', closeDrawer);
         drawerOverlay.addEventListener('click', closeDrawer);
+
+        scaleInput.addEventListener('input', updateScaleMarker);
+        unitSelector.addEventListener('change', updateScaleMarker);
 
         // --- Auto-start on Page Load ---
         document.addEventListener('DOMContentLoaded', () => {
@@ -291,10 +381,13 @@
                 errorMessage.classList.remove('hidden');
                 statusMessage.textContent = "Camera access not supported.";
             }
+            // Initial call to set the scale marker state
+            updateScaleMarker();
         });
     </script>
 
 </body>
 </html>
+
 
 
