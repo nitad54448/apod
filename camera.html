@@ -48,13 +48,23 @@
                         <video id="cameraFeed" class="w-full h-full object-cover" autoplay playsinline></video>
                         <!-- Marker lines will be dynamically added here -->
                         
-                        <!-- Settings Drawer Toggle Button -->
-                        <button id="openDrawerButton" class="absolute top-3 left-3 bg-gray-900/50 hover:bg-gray-900/80 text-white p-2 rounded-full transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            </svg>
-                        </button>
+                        <!-- Overlay Buttons -->
+                        <div class="absolute top-3 left-3 flex flex-col space-y-2">
+                             <!-- Settings Drawer Toggle Button -->
+                            <button id="openDrawerButton" class="bg-gray-900/50 hover:bg-gray-900/80 text-white p-2 rounded-full transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                            </button>
+                             <!-- Take Photo Button -->
+                            <button id="takePhotoButton" class="bg-gray-900/50 hover:bg-gray-900/80 text-white p-2 rounded-full transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                               <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                            </button>
+                        </div>
 
                         <!-- Flipped Text Indicators -->
                         <div id="hFlippedIndicator" class="absolute bottom-3 right-3 bg-black/50 text-white text-xs font-bold py-1 px-2 rounded-md hidden">H FLIPPED</div>
@@ -150,6 +160,8 @@
         const scaleInput = document.getElementById('scaleInput');
         const unitSelector = document.getElementById('unitSelector');
         const scaleMarker = document.getElementById('scaleMarker');
+        const takePhotoButton = document.getElementById('takePhotoButton');
+
 
         let currentStream; // To hold the active stream
 
@@ -221,6 +233,7 @@
                     statusMessage.classList.add('hidden');
                     flipVButton.disabled = false;
                     flipHButton.disabled = false;
+                    takePhotoButton.disabled = false;
                     populateMarkerInputs();
                     drawMarkers();
                     getAndSetCameras(); // Populate list after stream starts for labels
@@ -352,6 +365,107 @@
             });
         }
 
+        function getFormattedTimestamp() {
+            const d = new Date();
+            const pad = (n) => n < 10 ? '0' + n : n;
+            const date = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+            const time = `${pad(d.getHours())}-${pad(d.getMinutes())}-${pad(d.getSeconds())}`;
+            return `${date}_${time}`;
+        }
+        
+        function takeScreenshot() {
+            const canvas = document.createElement('canvas');
+            canvas.width = videoElement.videoWidth;
+            canvas.height = videoElement.videoHeight;
+            const ctx = canvas.getContext('2d');
+
+            // --- Handle Flipping ---
+            const isVFLipped = videoElement.classList.contains('v-flipped');
+            const isHFLipped = videoElement.classList.contains('h-flipped');
+            
+            ctx.save(); // Save the default state
+            if (isHFLipped) {
+                ctx.translate(canvas.width, 0);
+                ctx.scale(-1, 1);
+            }
+            if (isVFLipped) {
+                ctx.translate(0, canvas.height);
+                ctx.scale(1, -1);
+            }
+            ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+            ctx.restore(); // Restore to the default state (unflipped)
+
+            // --- Draw Overlays ---
+            // 1. Markers
+            ctx.fillStyle = 'rgba(239, 68, 68, 0.7)';
+            markers.forEach(marker => {
+                if (marker.type === 'Vertical') {
+                    const x = (marker.position / 100) * canvas.width;
+                    ctx.fillRect(x - 1, 0, 2, canvas.height);
+                } else {
+                    const y = (marker.position / 100) * canvas.height;
+                    ctx.fillRect(0, y - 1, canvas.width, 2);
+                }
+            });
+
+            // 2. Flip Indicators
+            ctx.font = 'bold 12px Inter, sans-serif';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            if (!vFlippedIndicator.classList.contains('hidden')) {
+                 const text = "V FLIPPED";
+                 const textMetrics = ctx.measureText(text);
+                 ctx.fillRect(canvas.width - textMetrics.width - 24, 12, textMetrics.width + 16, 20);
+                 ctx.fillStyle = 'white';
+                 ctx.fillText(text, canvas.width - textMetrics.width - 16, 26);
+            }
+            if (!hFlippedIndicator.classList.contains('hidden')) {
+                 ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                 const text = "H FLIPPED";
+                 const textMetrics = ctx.measureText(text);
+                 ctx.fillRect(canvas.width - textMetrics.width - 24, canvas.height - 32, textMetrics.width + 16, 20);
+                 ctx.fillStyle = 'white';
+                 ctx.fillText(text, canvas.width - textMetrics.width - 16, canvas.height - 18);
+            }
+
+            // 3. Scale Bar
+            const scaleValue = parseFloat(scaleInput.value);
+            if (scaleValue > 0) {
+                 const unit = unitSelector.value;
+                 const barWidth = 120;
+                 const barX = 12;
+                 const barY = canvas.height - 40;
+                 ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                 ctx.fillRect(barX - 8, barY - 8, barWidth + 16, 40);
+
+                 // Draw ticks and line
+                 ctx.strokeStyle = 'white';
+                 ctx.lineWidth = 1;
+                 ctx.beginPath();
+                 ctx.moveTo(barX, barY + 10);
+                 ctx.lineTo(barX + barWidth, barY + 10);
+                 for (let i = 0; i <= 10; i++) {
+                     const tickX = barX + (i * barWidth / 10);
+                     const tickHeight = (i === 0 || i === 5 || i === 10) ? 10 : 5;
+                     ctx.moveTo(tickX, barY);
+                     ctx.lineTo(tickX, barY + tickHeight);
+                 }
+                 ctx.stroke();
+
+                 // Draw text
+                 ctx.fillStyle = 'white';
+                 ctx.font = 'bold 12px Inter, sans-serif';
+                 ctx.textAlign = 'center';
+                 ctx.fillText(`${scaleValue} ${unit}`, barX + barWidth / 2, barY + 28);
+            }
+
+            // --- Trigger Download ---
+            const link = document.createElement('a');
+            link.download = `camera_${getFormattedTimestamp()}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+
         // --- Event Listeners ---
         cameraSelector.addEventListener('change', (event) => startCamera(event.target.value));
         
@@ -368,6 +482,8 @@
         openDrawerButton.addEventListener('click', openDrawer);
         closeDrawerButton.addEventListener('click', closeDrawer);
         drawerOverlay.addEventListener('click', closeDrawer);
+        takePhotoButton.addEventListener('click', takeScreenshot);
+
 
         scaleInput.addEventListener('input', updateScaleMarker);
         unitSelector.addEventListener('change', updateScaleMarker);
@@ -388,6 +504,4 @@
 
 </body>
 </html>
-
-
 
