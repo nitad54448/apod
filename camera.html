@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Camera Viewer</title>
-    <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* Custom styles for a clean look */
@@ -31,114 +30,110 @@
         input[type=number] {
             -moz-appearance: textfield;
         }
+        /* Style for the sr-only class used in toggles */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border-width: 0;
+        }
     </style>
 </head>
-<body class="bg-gray-900 text-white flex items-center justify-center min-h-screen p-4 overflow-hidden">
+<body class="bg-black text-white h-screen w-screen flex items-center justify-center overflow-hidden">
 
-    <div class="container mx-auto p-4 sm:p-6 max-w-5xl text-center">
-        <div class="bg-gray-800 rounded-2xl shadow-2xl p-6 md:p-8">
-            <h1 class="text-3xl md:text-4xl font-bold mb-2">Live Camera Feed</h1>
-            <p id="statusMessage" class="text-gray-400 mb-6">Requesting camera access...</p>
-
-            <!-- Main container for video and drawer -->
-            <div class="relative">
-                <!-- Video Feed -->
-                <div class="flex-1">
-                    <div id="videoContainer" class="relative w-full aspect-video bg-black rounded-lg overflow-hidden shadow-lg">
-                        <video id="cameraFeed" class="w-full h-full object-cover" autoplay playsinline></video>
-                        <!-- Marker lines will be dynamically added here -->
-                        
-                        <!-- Overlay Buttons -->
-                        <div class="absolute top-3 left-3 flex flex-col space-y-2">
-                             <!-- Settings Drawer Toggle Button -->
-                            <button id="openDrawerButton" class="bg-gray-900/50 hover:bg-gray-900/80 text-white p-2 rounded-full transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                </svg>
-                            </button>
-                             <!-- Take Photo Button -->
-                            <button id="takePhotoButton" class="bg-gray-900/50 hover:bg-gray-900/80 text-white p-2 rounded-full transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-                               <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                                </svg>
-                            </button>
-                        </div>
-
-                        <!-- Flipped Text Indicators -->
-                        <div id="hFlippedIndicator" class="absolute bottom-3 right-3 bg-black/50 text-white text-xs font-bold py-1 px-2 rounded-md hidden">H FLIPPED</div>
-                        <div id="vFlippedIndicator" class="absolute top-3 right-3 bg-black/50 text-white text-xs font-bold py-1 px-2 rounded-md hidden">V FLIPPED</div>
-                        <!-- Scale Marker Indicator -->
-                        <div id="scaleMarker" class="absolute bottom-3 left-3 bg-black/50 text-white text-xs p-2 rounded-md hidden"></div>
-                    </div>
-                </div>
-
-                <!-- Drawer/Side Panel -->
-                <div id="controlsDrawer" class="fixed top-0 left-0 h-full w-full max-w-xs md:max-w-sm bg-gray-800 shadow-2xl p-4 transform -translate-x-full transition-transform duration-300 ease-in-out z-50 overflow-y-auto">
-                     <!-- Drawer Header -->
-                    <div class="flex justify-between items-center border-b border-gray-600 pb-3 mb-4">
-                        <h2 class="text-xl font-semibold text-white">Controls</h2>
-                        <button id="closeDrawerButton" class="text-gray-400 hover:text-white">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-                    </div>
-
-                    <!-- Drawer Content -->
-                    <div class="space-y-6">
-                        <div>
-                             <label for="cameraSelector" class="font-medium text-gray-300 block text-left">Select Camera</label>
-                             <select id="cameraSelector" class="mt-2 w-full bg-gray-900 border border-gray-600 rounded-md p-2 text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none disabled:bg-gray-800 disabled:cursor-not-allowed" disabled>
-                                <option>No cameras found</option>
-                             </select>
-                        </div>
-
-                        <div>
-                            <label class="font-medium text-gray-300 block text-left mb-2">Image Orientation</label>
-                            <div class="flex space-x-2">
-                                <button id="flipVButton" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-all transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-blue-500 focus:ring-opacity-50 disabled:bg-gray-500 disabled:cursor-not-allowed disabled:hover:scale-100" disabled>
-                                    Flip Vertical
-                                </button>
-                                <button id="flipHButton" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-all transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-blue-500 focus:ring-opacity-50 disabled:bg-gray-500 disabled:cursor-not-allowed disabled:hover:scale-100" disabled>
-                                    Flip Horizontal
-                                </button>
-                            </div>
-                        </div>
-
-                        <div>
-                            <h3 class="text-md font-semibold mb-2 text-white text-left">Scale Marker</h3>
-                            <div class="flex items-center space-x-2 p-3 bg-black/20 rounded-lg">
-                                <input type="number" id="scaleInput" value="0" min="0" class="w-full bg-gray-900 border border-gray-600 rounded-md p-1 text-center text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="Value">
-                                <select id="unitSelector" class="bg-gray-900 border border-gray-600 rounded-md p-1 text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                                    <option>mm</option>
-                                    <option>µm</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div>
-                            <h3 class="text-md font-semibold mb-2 text-white text-left">Adjustable Markers</h3>
-                            <div id="markerList" class="text-gray-300 text-sm space-y-2 mt-2 p-3 bg-black/20 rounded-lg">
-                                <p class="text-gray-500">Camera not started...</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+    <div class="relative w-full h-full flex items-center justify-center">
+        
+        <div id="videoContainer" class="relative w-full aspect-video bg-black rounded-lg overflow-hidden shadow-lg">
+            <video id="cameraFeed" class="w-full h-full object-cover" autoplay playsinline></video>
+            <div class="absolute top-3 left-3 flex flex-col space-y-2">
+                 <button id="openDrawerButton" class="bg-gray-900/50 hover:bg-gray-900/80 text-white p-2 rounded-full transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                </button>
+                 <button id="takePhotoButton" class="bg-gray-900/50 hover:bg-gray-900/80 text-white p-2 rounded-full transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                   <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                </button>
             </div>
 
-            <!-- Status Messages -->
-            <div class="mt-6 h-6"> <!-- Fixed height to prevent layout shift -->
-                <p id="errorMessage" class="text-red-400 font-medium hidden"></p>
+            <div id="hFlippedIndicator" class="absolute bottom-3 right-3 bg-black/50 text-white text-xs font-bold py-1 px-2 rounded-md hidden">H FLIPPED</div>
+            <div id="vFlippedIndicator" class="absolute top-3 right-3 bg-black/50 text-white text-xs font-bold py-1 px-2 rounded-md hidden">V FLIPPED</div>
+            <div id="scaleMarker" class="absolute bottom-3 left-3 bg-black/50 text-white text-xs p-2 rounded-md hidden"></div>
+        </div>
+
+        <div id="controlsDrawer" class="fixed top-0 left-0 h-full w-full max-w-xs md:max-w-sm bg-gray-800 shadow-2xl p-4 transform -translate-x-full transition-transform duration-300 ease-in-out z-50 overflow-y-auto">
+             <div class="flex justify-between items-center border-b border-gray-600 pb-3 mb-4">
+                <h2 class="text-xl font-semibold text-white">Controls</h2>
+                <button id="closeDrawerButton" class="text-gray-400 hover:text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <div class="space-y-6">
+                <div>
+                     <label for="cameraSelector" class="font-medium text-gray-300 block text-left">Select Camera</label>
+                     <select id="cameraSelector" class="mt-2 w-full bg-gray-900 border border-gray-600 rounded-md p-2 text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none disabled:bg-gray-800 disabled:cursor-not-allowed" disabled>
+                        <option>No cameras found</option>
+                     </select>
+                </div>
+
+                <div>
+                    <label class="font-medium text-gray-300 block text-left mb-2">Image Orientation</label>
+                    <div class="space-y-3 p-3 bg-black/20 rounded-lg">
+                        <div class="flex items-center justify-between">
+                            <span class="text-gray-300">Flip Vertical</span>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="flipVToggle" class="sr-only peer" disabled>
+                                <div class="w-11 h-6 bg-gray-700 rounded-full peer peer-focus:ring-2 peer-focus:ring-blue-500 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-gray-300">Flip Horizontal</span>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="flipHToggle" class="sr-only peer" disabled>
+                                <div class="w-11 h-6 bg-gray-700 rounded-full peer peer-focus:ring-2 peer-focus:ring-blue-500 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-md font-semibold mb-2 text-white text-left">Scale Marker</h3>
+                    <div class="flex items-center space-x-2 p-3 bg-black/20 rounded-lg">
+                        <input type="number" id="scaleInput" value="0" min="0" class="w-full bg-gray-900 border border-gray-600 rounded-md p-1 text-center text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="Value">
+                        <select id="unitSelector" class="bg-gray-900 border border-gray-600 rounded-md p-1 text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <option>mm</option>
+                            <option>µm</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-md font-semibold mb-2 text-white text-left">Adjustable Markers</h3>
+                    <div id="markerList" class="text-gray-300 text-sm space-y-2 mt-2 p-3 bg-black/20 rounded-lg">
+                        <p class="text-gray-500">Camera not started...</p>
+                    </div>
+                </div>
             </div>
         </div>
-        <footer class="mt-8 text-gray-500 text-sm">
-            <p>Your camera feed is private and is not being recorded or sent anywhere.</p>
-        </footer>
+
+        <div class="absolute bottom-10 left-1/2 -translate-x-1/2 text-center pointer-events-none z-10">
+            <p id="statusMessage" class="text-gray-300 bg-black/50 px-3 py-1 rounded-md">Requesting camera access...</p>
+            <p id="errorMessage" class="text-red-400 font-medium bg-black/50 px-3 py-1 rounded-md mt-2 hidden"></p>
+        </div>
     </div>
     
-    <!-- Overlay for when drawer is open -->
     <div id="drawerOverlay" class="fixed inset-0 bg-black/50 z-40 hidden"></div>
 
     <script>
@@ -146,8 +141,6 @@
         const videoElement = document.getElementById('cameraFeed');
         const statusMessage = document.getElementById('statusMessage');
         const errorMessage = document.getElementById('errorMessage');
-        const flipVButton = document.getElementById('flipVButton');
-        const flipHButton = document.getElementById('flipHButton');
         const vFlippedIndicator = document.getElementById('vFlippedIndicator');
         const hFlippedIndicator = document.getElementById('hFlippedIndicator');
         const videoContainer = document.getElementById('videoContainer');
@@ -161,6 +154,10 @@
         const unitSelector = document.getElementById('unitSelector');
         const scaleMarker = document.getElementById('scaleMarker');
         const takePhotoButton = document.getElementById('takePhotoButton');
+        
+        // NEW: References for toggle switches
+        const flipVToggle = document.getElementById('flipVToggle');
+        const flipHToggle = document.getElementById('flipHToggle');
 
 
         let currentStream; // To hold the active stream
@@ -231,8 +228,11 @@
                 videoElement.onloadedmetadata = () => {
                     videoElement.play();
                     statusMessage.classList.add('hidden');
-                    flipVButton.disabled = false;
-                    flipHButton.disabled = false;
+                    
+                    // UPDATED: Enable toggles instead of buttons
+                    flipVToggle.disabled = false;
+                    flipHToggle.disabled = false;
+                    
                     takePhotoButton.disabled = false;
                     populateMarkerInputs();
                     drawMarkers();
@@ -247,6 +247,7 @@
                 else if (error.name === "NotFoundError" || error.name === "DevicesNotFoundError") message = "No camera was found on your device.";
                 errorMessage.textContent = message;
                 errorMessage.classList.remove('hidden');
+                 statusMessage.classList.add('hidden'); // Hide the initial "requesting" message
             }
         }
         
@@ -469,12 +470,13 @@
         // --- Event Listeners ---
         cameraSelector.addEventListener('change', (event) => startCamera(event.target.value));
         
-        flipVButton.addEventListener('click', () => {
+        // UPDATED: Event listeners for toggles
+        flipVToggle.addEventListener('change', () => {
             videoElement.classList.toggle('v-flipped');
             vFlippedIndicator.classList.toggle('hidden');
         });
 
-        flipHButton.addEventListener('click', () => {
+        flipHToggle.addEventListener('change', () => {
             videoElement.classList.toggle('h-flipped');
             hFlippedIndicator.classList.toggle('hidden');
         });
@@ -504,4 +506,3 @@
 
 </body>
 </html>
-
