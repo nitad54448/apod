@@ -155,7 +155,6 @@
         const scaleMarker = document.getElementById('scaleMarker');
         const takePhotoButton = document.getElementById('takePhotoButton');
         
-        // NEW: References for toggle switches
         const flipVToggle = document.getElementById('flipVToggle');
         const flipHToggle = document.getElementById('flipHToggle');
 
@@ -163,11 +162,14 @@
         let currentStream; // To hold the active stream
 
         // --- Marker Data ---
+        // UPDATED: Added start/end properties to draw a rectangle from 25% to 75%
         const markers = [
-            { type: 'Vertical', position: 25 },
-            { type: 'Vertical', position: 75 },
-            { type: 'Horizontal', position: 30 },
-            { type: 'Horizontal', position: 70 }
+            // Top and Bottom sides of the rectangle
+            { type: 'Horizontal', position: 33, start: 0, end: 100 },
+            { type: 'Horizontal', position: 66, start: 0, end: 100 },
+            // Left and Right sides of the rectangle
+            { type: 'Vertical', position: 33, start: 0, end: 100 },
+            { type: 'Vertical', position: 66, start: 0, end: 100 }
         ];
 
         // --- Drawer Functions ---
@@ -229,14 +231,13 @@
                     videoElement.play();
                     statusMessage.classList.add('hidden');
                     
-                    // UPDATED: Enable toggles instead of buttons
                     flipVToggle.disabled = false;
                     flipHToggle.disabled = false;
                     
                     takePhotoButton.disabled = false;
                     populateMarkerInputs();
                     drawMarkers();
-                    getAndSetCameras(); // Populate list after stream starts for labels
+                    getAndSetCameras(); 
                 };
 
             } catch (error) {
@@ -247,7 +248,7 @@
                 else if (error.name === "NotFoundError" || error.name === "DevicesNotFoundError") message = "No camera was found on your device.";
                 errorMessage.textContent = message;
                 errorMessage.classList.remove('hidden');
-                 statusMessage.classList.add('hidden'); // Hide the initial "requesting" message
+                statusMessage.classList.add('hidden');
             }
         }
         
@@ -256,11 +257,10 @@
             const value = parseFloat(scaleInput.value);
             const unit = unitSelector.value;
 
-            // Clear previous content
             scaleMarker.innerHTML = '';
 
             if (value > 0) {
-                scaleMarker.style.width = '120px'; // A fixed width for the scale bar
+                scaleMarker.style.width = '120px';
 
                 const scaleContainer = document.createElement('div');
                 scaleContainer.className = 'flex flex-col items-center w-full';
@@ -269,27 +269,22 @@
                 ticksContainer.className = 'w-full flex justify-between items-end relative';
                 ticksContainer.style.height = '10px';
 
-                // Create 11 ticks for 10 divisions
                 for (let i = 0; i <= 10; i++) {
                     const tick = document.createElement('div');
                     tick.style.backgroundColor = 'white';
                     tick.style.width = '1px';
-                    // Taller ticks at start, middle, and end
                     tick.style.height = (i === 0 || i === 5 || i === 10) ? '100%' : '50%';
                     ticksContainer.appendChild(tick);
                 }
                 
-                // The main horizontal line connecting the ticks
                 const line = document.createElement('div');
                 line.className = 'absolute bottom-0 left-0 w-full h-px bg-white';
                 ticksContainer.appendChild(line);
 
-                // Text label below the scale
                 const label = document.createElement('div');
                 label.className = 'font-semibold mt-1';
                 label.textContent = `${value} ${unit}`;
 
-                // Assemble the scale bar
                 scaleContainer.appendChild(ticksContainer);
                 scaleContainer.appendChild(label);
                 scaleMarker.appendChild(scaleContainer);
@@ -340,6 +335,7 @@
             });
         }
 
+        // UPDATED to use start/end properties
         function drawMarkers() {
             const existingMarkers = videoContainer.querySelectorAll('.marker-line');
             existingMarkers.forEach(m => m.remove());
@@ -347,19 +343,25 @@
                 const line = document.createElement('div');
                 line.classList.add('marker-line');
                 line.style.position = 'absolute';
-                line.style.backgroundColor = 'rgba(239, 68, 68, 0.7)';
+                line.style.backgroundColor = 'rgba(98, 250, 68, 0.4)';
                 line.style.pointerEvents = 'none';
+
+                // Ensure start/end have default values if not defined
+                const start = marker.start ?? 0;
+                const end = marker.end ?? 100;
+                const length = end - start;
+
                 if (marker.type === 'Vertical') {
                     line.style.left = `${marker.position}%`;
-                    line.style.top = '0';
-                    line.style.width = '2px';
-                    line.style.height = '100%';
+                    line.style.top = `${start}%`;
+                    line.style.width = '1px';
+                    line.style.height = `${length}%`;
                     line.style.transform = 'translateX(-1px)';
                 } else if (marker.type === 'Horizontal') {
-                    line.style.left = '0';
+                    line.style.left = `${start}%`;
                     line.style.top = `${marker.position}%`;
-                    line.style.width = '100%';
-                    line.style.height = '2px';
+                    line.style.width = `${length}%`;
+                    line.style.height = '1px';
                     line.style.transform = 'translateY(-1px)';
                 }
                 videoContainer.appendChild(line);
@@ -374,6 +376,7 @@
             return `${date}_${time}`;
         }
         
+        // UPDATED to draw partial markers on the canvas
         function takeScreenshot() {
             const canvas = document.createElement('canvas');
             canvas.width = videoElement.videoWidth;
@@ -384,7 +387,7 @@
             const isVFLipped = videoElement.classList.contains('v-flipped');
             const isHFLipped = videoElement.classList.contains('h-flipped');
             
-            ctx.save(); // Save the default state
+            ctx.save();
             if (isHFLipped) {
                 ctx.translate(canvas.width, 0);
                 ctx.scale(-1, 1);
@@ -394,18 +397,25 @@
                 ctx.scale(1, -1);
             }
             ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
-            ctx.restore(); // Restore to the default state (unflipped)
+            ctx.restore(); 
 
             // --- Draw Overlays ---
-            // 1. Markers
+            // 1. Markers (UPDATED)
             ctx.fillStyle = 'rgba(239, 68, 68, 0.7)';
             markers.forEach(marker => {
+                const start = marker.start ?? 0;
+                const end = marker.end ?? 100;
+
                 if (marker.type === 'Vertical') {
                     const x = (marker.position / 100) * canvas.width;
-                    ctx.fillRect(x - 1, 0, 2, canvas.height);
+                    const y = (start / 100) * canvas.height;
+                    const height = ((end - start) / 100) * canvas.height;
+                    ctx.fillRect(x - 1, y, 2, height);
                 } else {
+                    const x = (start / 100) * canvas.width;
                     const y = (marker.position / 100) * canvas.height;
-                    ctx.fillRect(0, y - 1, canvas.width, 2);
+                    const width = ((end - start) / 100) * canvas.width;
+                    ctx.fillRect(x, y - 1, width, 2);
                 }
             });
 
@@ -438,7 +448,6 @@
                  ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
                  ctx.fillRect(barX - 8, barY - 8, barWidth + 16, 40);
 
-                 // Draw ticks and line
                  ctx.strokeStyle = 'white';
                  ctx.lineWidth = 1;
                  ctx.beginPath();
@@ -452,7 +461,6 @@
                  }
                  ctx.stroke();
 
-                 // Draw text
                  ctx.fillStyle = 'white';
                  ctx.font = 'bold 12px Inter, sans-serif';
                  ctx.textAlign = 'center';
@@ -470,7 +478,6 @@
         // --- Event Listeners ---
         cameraSelector.addEventListener('change', (event) => startCamera(event.target.value));
         
-        // UPDATED: Event listeners for toggles
         flipVToggle.addEventListener('change', () => {
             videoElement.classList.toggle('v-flipped');
             vFlippedIndicator.classList.toggle('hidden');
@@ -499,7 +506,6 @@
                 errorMessage.classList.remove('hidden');
                 statusMessage.textContent = "Camera access not supported.";
             }
-            // Initial call to set the scale marker state
             updateScaleMarker();
         });
     </script>
