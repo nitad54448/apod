@@ -7,7 +7,6 @@
     
    <link href="./dist/output.css" rel="stylesheet">
     
-    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -66,13 +65,11 @@
 
     <div class="container mx-auto p-4 sm:p-6 lg:p-8 max-w-5xl">
 
-        <!-- Header Section -->
         <header class="text-center my-8">
             <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-2">Astronomy Picture of the Day</h1>
             <p class="text-base text-stone-400">Explore the cosmos, one day at a time.</p>
         </header>
 
-        <!-- Controls Section -->
         <div class="flex flex-col sm:flex-row justify-center items-center gap-4 my-8">
             <div class="flex items-center gap-2">
                 <label for="apod-date" class="text-stone-300">Select Date:</label>
@@ -83,22 +80,18 @@
             </button>
         </div>
 
-        <!-- Main Content Area -->
         <main id="apod-content" class="bg-stone-900/50 backdrop-blur-sm border border-stone-800 rounded-xl shadow-2xl p-4 sm:p-6 lg:p-8 min-h-[500px] flex justify-center items-center">
             
-            <!-- Loader will be shown while fetching data -->
             <div id="loader" class="text-center">
                 <div class="loader mx-auto"></div>
                 <p class="mt-4 text-stone-400">Contacting NASA...</p>
             </div>
 
-            <!-- APOD Data will be populated here -->
             <div id="apod-data" class="hidden w-full">
                 <h2 id="apod-title" class="text-2xl sm:text-3xl font-bold text-white text-center mb-4"></h2>
                 
                 <div id="apod-media-container" class="mb-6 bg-black rounded-lg overflow-hidden flex justify-center items-center">
-                    <!-- Image or Video will be inserted here -->
-                </div>
+                    </div>
 
                 <div class="space-y-4">
                     <p class="text-stone-400 text-center"><strong>Date:</strong> <span id="apod-date-display"></span></p>
@@ -107,7 +100,6 @@
                 </div>
             </div>
             
-            <!-- Error message container -->
             <div id="error-container" class="hidden text-center">
                  <p class="text-2xl text-red-400">Houston, we have a problem.</p>
                  <p id="error-message" class="mt-2 text-stone-400"></p>
@@ -115,13 +107,15 @@
 
         </main>
 
-        <!-- Footer Section -->
         <footer class="text-center mt-8 py-4">
             <p class="text-stone-500 text-sm">
                 Powered by the <a href="https://api.nasa.gov/" target="_blank" rel="noopener noreferrer" class="text-violet-400 hover:underline">NASA APOD API</a>.
             </p>
-             <p class="text-stone-600 text-xs mt-1">
+            <p class="text-stone-600 text-xs mt-1">
                 All images and data are courtesy of NASA and the content owners.
+            </p>
+            <p class="text-stone-700 text-xs mt-2 font-mono">
+                API Usage: <span id="rate-limit-display">Checking...</span> remaining
             </p>
         </footer>
 
@@ -141,15 +135,30 @@
             const dateDisplayEl = document.getElementById('apod-date-display');
             const explanationEl = document.getElementById('apod-explanation');
             const copyrightEl = document.getElementById('apod-copyright');
+            const rateLimitDisplay = document.getElementById('rate-limit-display'); // New Element
 
             const datePicker = document.getElementById('apod-date');
             const randomBtn = document.getElementById('random-btn');
 
-            //1000 calls per hour
+            // Your new API Key
             const API_KEY = 'MZMyV7dMWMC9Tfhl2bybxvbgZxMNAY2ub8e5xJVH';
             const API_URL = 'https://api.nasa.gov/planetary/apod';
 
             // --- Functions ---
+
+            /**
+             * Helper to get "Today" in New York (NASA) Timezone
+             * Prevents asking for a future date if user is in a timezone ahead of US Eastern.
+             */
+            function getNasaDate() {
+                const now = new Date();
+                return new Intl.DateTimeFormat('en-CA', { 
+                    timeZone: 'America/New_York',
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit'
+                }).format(now);
+            }
 
             /**
              * Fetches data from the APOD API for a specific date.
@@ -164,6 +173,13 @@
 
                 try {
                     const response = await fetch(url);
+                    
+                    // -- NEW: Check Headers for Rate Limit --
+                    const remaining = response.headers.get("X-RateLimit-Remaining");
+                    if (remaining) {
+                        rateLimitDisplay.textContent = remaining;
+                    }
+
                     if (!response.ok) {
                         const errorData = await response.json();
                         throw new Error(errorData.msg || `HTTP error! status: ${response.status}`);
@@ -219,13 +235,15 @@
             }
 
             /**
-             * Generates a random date between APOD's start and today.
+             * Generates a random date between APOD's start and today (NASA time).
              * @returns {string} A date string in YYYY-MM-DD format.
              */
             function getRandomDate() {
-                const startDate = new Date('1995-06-16'); // APOD start date
-                const endDate = new Date();
-                const randomTime = startDate.getTime() + Math.random() * (endDate.getTime() - startDate.getTime());
+                const startDate = new Date('1995-06-16').getTime(); // APOD start date
+                const endDateStr = getNasaDate(); // Get today in NY time
+                const endDate = new Date(endDateStr).getTime();
+                
+                const randomTime = startDate + Math.random() * (endDate - startDate);
                 const randomDate = new Date(randomTime);
                 return randomDate.toISOString().split('T')[0]; // Format as YYYY-MM-DD
             }
@@ -265,10 +283,17 @@
             });
 
             // --- Initial Load ---
-            const today = new Date().toISOString().split('T')[0];
-            datePicker.value = today;
-            datePicker.max = today; // Prevent selecting future dates
-            fetchAPOD(); // Fetch today's picture on page load
+            // 1. Get the current date in NASA's timezone
+            const todayNASA = getNasaDate();
+            
+            // 2. Set the max date allowed in the picker to NASA's today
+            datePicker.max = todayNASA; 
+            
+            // 3. Set the default value
+            datePicker.value = todayNASA;
+            
+            // 4. Fetch!
+            fetchAPOD(todayNASA); 
         });
     </script>
 
