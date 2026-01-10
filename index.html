@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Astronomy Picture of the Day</title>
     
-   <link href="./dist/output.css" rel="stylesheet">
+   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -90,8 +90,8 @@
             <div id="apod-data" class="hidden w-full">
                 <h2 id="apod-title" class="text-2xl sm:text-3xl font-bold text-white text-center mb-4"></h2>
                 
-                <div id="apod-media-container" class="mb-6 bg-black rounded-lg overflow-hidden flex justify-center items-center">
-                    </div>
+                <div id="apod-media-container" class="mb-6 bg-black rounded-lg overflow-hidden flex justify-center items-center min-h-[300px]">
+                </div>
 
                 <div class="space-y-4">
                     <p class="text-stone-400 text-center"><strong>Date:</strong> <span id="apod-date-display"></span></p>
@@ -100,9 +100,13 @@
                 </div>
             </div>
             
-            <div id="error-container" class="hidden text-center">
-                 <p class="text-2xl text-red-400">Houston, we have a problem.</p>
-                 <p id="error-message" class="mt-2 text-stone-400"></p>
+            <div id="error-container" class="hidden text-center max-w-lg mx-auto">
+                 <p class="text-2xl text-red-400 font-bold mb-2">Houston, we have a problem.</p>
+                 <p id="error-message" class="text-stone-300 mb-6"></p>
+                 
+                 <button id="retry-btn" class="hidden bg-stone-700 hover:bg-stone-600 text-white font-bold py-2 px-6 rounded-lg transition-colors duration-300 border border-stone-600">
+                    Try Again
+                 </button>
             </div>
 
         </main>
@@ -127,29 +131,29 @@
             const contentContainer = document.getElementById('apod-content');
             const loader = document.getElementById('loader');
             const apodDataContainer = document.getElementById('apod-data');
+            
+            // Error Elements
             const errorContainer = document.getElementById('error-container');
             const errorMessage = document.getElementById('error-message');
+            const retryBtn = document.getElementById('retry-btn');
             
             const titleEl = document.getElementById('apod-title');
             const mediaContainer = document.getElementById('apod-media-container');
             const dateDisplayEl = document.getElementById('apod-date-display');
             const explanationEl = document.getElementById('apod-explanation');
             const copyrightEl = document.getElementById('apod-copyright');
-            const rateLimitDisplay = document.getElementById('rate-limit-display'); // New Element
+            const rateLimitDisplay = document.getElementById('rate-limit-display');
 
             const datePicker = document.getElementById('apod-date');
             const randomBtn = document.getElementById('random-btn');
 
-            // Your new API Key
+            // --- Configuration ---
             const API_KEY = 'MZMyV7dMWMC9Tfhl2bybxvbgZxMNAY2ub8e5xJVH';
             const API_URL = 'https://api.nasa.gov/planetary/apod';
+            let lastAttemptedDate = null; // To store date for retrying
 
             // --- Functions ---
 
-            /**
-             * Helper to get "Today" in New York (NASA) Timezone
-             * Prevents asking for a future date if user is in a timezone ahead of US Eastern.
-             */
             function getNasaDate() {
                 const now = new Date();
                 return new Intl.DateTimeFormat('en-CA', { 
@@ -160,12 +164,10 @@
                 }).format(now);
             }
 
-            /**
-             * Fetches data from the APOD API for a specific date.
-             * @param {string} [date] - The date in YYYY-MM-DD format. If null, fetches today's data.
-             */
             async function fetchAPOD(date) {
+                lastAttemptedDate = date; // Save for retry
                 showLoader();
+                
                 let url = `${API_URL}?api_key=${API_KEY}`;
                 if (date) {
                     url += `&date=${date}`;
@@ -174,28 +176,47 @@
                 try {
                     const response = await fetch(url);
                     
-                    // -- NEW: Check Headers for Rate Limit --
+                    // Update Rate Limit
                     const remaining = response.headers.get("X-RateLimit-Remaining");
                     if (remaining) {
                         rateLimitDisplay.textContent = remaining;
                     }
 
                     if (!response.ok) {
-                        const errorData = await response.json();
-                        throw new Error(errorData.msg || `HTTP error! status: ${response.status}`);
+                        // FIX: Read as text first to prevent JSON crash on empty body
+                        const errorText = await response.text();
+                        
+                        // Handle Specific 504 / 503 Server Errors
+                        if (response.status === 504 || response.status === 503 || response.status === 500) {
+                             throw new Error(`NASA's servers are currently overloaded or down (Error ${response.status}). Please wait a moment and try again.`);
+                        }
+
+                        // Try to parse JSON error message from NASA
+                        let errMsg = `HTTP error! status: ${response.status}`;
+                        try {
+                            const jsonError = JSON.parse(errorText);
+                            if (jsonError.msg) errMsg = jsonError.msg;
+                            else if (jsonError.error && jsonError.error.message) errMsg = jsonError.error.message;
+                        } catch(e) {
+                            // If not JSON, use the text if it's short
+                            if (errorText && errorText.length < 100) errMsg = errorText;
+                        }
+
+                        throw new Error(errMsg);
                     }
+
                     const data = await response.json();
                     renderAPOD(data);
+
                 } catch (error) {
                     console.error("Error fetching APOD data:", error);
-                    showError(`Could not fetch data. ${error.message}`);
+                    
+                    // Show Retry button if it looks like a network/server issue
+                    const isServerIssue = error.message.includes('504') || error.message.includes('503') || error.message.includes('500') || error.message.includes('fetch');
+                    showError(error.message, isServerIssue);
                 }
             }
             
-            /**
-             * Renders the fetched APOD data onto the page.
-             * @param {object} data - The data object from the APOD API.
-             */
             function renderAPOD(data) {
                 hideLoader();
                 
@@ -203,15 +224,15 @@
                 dateDisplayEl.textContent = data.date;
                 explanationEl.textContent = data.explanation;
                 
-                // Clear previous media
                 mediaContainer.innerHTML = '';
 
-                // Display image or video
                 if (data.media_type === 'image') {
                     const img = document.createElement('img');
                     img.src = data.hdurl || data.url;
                     img.alt = data.title;
-                    img.className = 'max-w-full h-auto rounded-lg mx-auto';
+                    img.className = 'max-w-full h-auto rounded-lg mx-auto shadow-lg';
+                    // Wait for image to load to ensure layout is correct
+                    img.onload = () => mediaContainer.classList.remove('animate-pulse');
                     mediaContainer.appendChild(img);
                 } else if (data.media_type === 'video') {
                     const iframe = document.createElement('iframe');
@@ -220,11 +241,10 @@
                     iframe.frameBorder = '0';
                     iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
                     iframe.allowFullscreen = true;
-                    iframe.className = 'w-full aspect-video rounded-lg';
+                    iframe.className = 'w-full aspect-video rounded-lg shadow-lg';
                     mediaContainer.appendChild(iframe);
                 }
 
-                // Display copyright information if available
                 if (data.copyright) {
                     copyrightEl.textContent = `© ${data.copyright}`;
                 } else {
@@ -234,18 +254,14 @@
                 apodDataContainer.classList.remove('hidden');
             }
 
-            /**
-             * Generates a random date between APOD's start and today (NASA time).
-             * @returns {string} A date string in YYYY-MM-DD format.
-             */
             function getRandomDate() {
-                const startDate = new Date('1995-06-16').getTime(); // APOD start date
-                const endDateStr = getNasaDate(); // Get today in NY time
+                const startDate = new Date('1995-06-16').getTime();
+                const endDateStr = getNasaDate();
                 const endDate = new Date(endDateStr).getTime();
                 
                 const randomTime = startDate + Math.random() * (endDate - startDate);
                 const randomDate = new Date(randomTime);
-                return randomDate.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+                return randomDate.toISOString().split('T')[0];
             }
 
             // --- UI Helper Functions ---
@@ -254,24 +270,29 @@
                 loader.classList.remove('hidden');
                 apodDataContainer.classList.add('hidden');
                 errorContainer.classList.add('hidden');
+                retryBtn.classList.add('hidden');
             }
 
             function hideLoader() {
                 loader.classList.add('hidden');
             }
             
-            function showError(message) {
+            function showError(message, allowRetry = false) {
                 hideLoader();
                 apodDataContainer.classList.add('hidden');
                 errorMessage.textContent = message;
                 errorContainer.classList.remove('hidden');
+                
+                if (allowRetry) {
+                    retryBtn.classList.remove('hidden');
+                }
             }
 
             // --- Event Listeners ---
             
             randomBtn.addEventListener('click', () => {
                 const randomDate = getRandomDate();
-                datePicker.value = randomDate; // Update date picker to reflect the random date
+                datePicker.value = randomDate;
                 fetchAPOD(randomDate);
             });
 
@@ -281,18 +302,22 @@
                     fetchAPOD(selectedDate);
                 }
             });
+            
+            // Retry Button Listener
+            retryBtn.addEventListener('click', () => {
+                if (lastAttemptedDate) {
+                    fetchAPOD(lastAttemptedDate);
+                } else {
+                    // Fallback if no date stored
+                    fetchAPOD(getNasaDate());
+                }
+            });
 
             // --- Initial Load ---
-            // 1. Get the current date in NASA's timezone
             const todayNASA = getNasaDate();
-            
-            // 2. Set the max date allowed in the picker to NASA's today
             datePicker.max = todayNASA; 
-            
-            // 3. Set the default value
             datePicker.value = todayNASA;
             
-            // 4. Fetch!
             fetchAPOD(todayNASA); 
         });
     </script>
