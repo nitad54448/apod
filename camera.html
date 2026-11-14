@@ -378,9 +378,26 @@
         
         // UPDATED to draw partial markers on the canvas
         function takeScreenshot() {
+            const vw = videoElement.videoWidth;
+            const vh = videoElement.videoHeight;
+            if (!vw || !vh) return;
+
+            const cw = videoElement.clientWidth || vw;
+            const ch = videoElement.clientHeight || vh;
+            const targetAspect = cw / ch;
+            const videoAspect = vw / vh;
+            let sx = 0, sy = 0, sw = vw, sh = vh;
+            if (videoAspect > targetAspect) {
+                sw = Math.round(vh * targetAspect);
+                sx = Math.round((vw - sw) / 2);
+            } else if (videoAspect < targetAspect) {
+                sh = Math.round(vw / targetAspect);
+                sy = Math.round((vh - sh) / 2);
+            }
+
             const canvas = document.createElement('canvas');
-            canvas.width = videoElement.videoWidth;
-            canvas.height = videoElement.videoHeight;
+            canvas.width = sw;
+            canvas.height = sh;
             const ctx = canvas.getContext('2d');
 
             // --- Handle Flipping ---
@@ -396,7 +413,7 @@
                 ctx.translate(0, canvas.height);
                 ctx.scale(1, -1);
             }
-            ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+            ctx.drawImage(videoElement, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
             ctx.restore(); 
 
             // --- Draw Overlays ---
@@ -442,7 +459,7 @@
             const scaleValue = parseFloat(scaleInput.value);
             if (scaleValue > 0) {
                  const unit = unitSelector.value;
-                 const barWidth = 120;
+                 const barWidth = videoElement.clientWidth > 0 ? (120 / videoElement.clientWidth) * canvas.width : 120;
                  const barX = 12;
                  const barY = canvas.height - 40;
                  ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
